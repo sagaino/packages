@@ -28,7 +28,8 @@ class _VideoAppState extends State<VideoApp> {
   void initState() {
     super.initState();
     _controller = VideoPlayerController.networkUrl(Uri.parse(
-        'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4'))
+        'https://cdn.lookinid.com/videos%2F075463e5-5059-48e5-9144-1fcea2b75bc0%2FC5A47874-4C9F-4BD9-89AA-BA0C397F8345_L0_001_1705264265.643299_o_IMG_3764_1705308735905.mp4'))
+        // 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4'))
       ..initialize().then((_) {
         // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
         setState(() {});

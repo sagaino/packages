@@ -561,11 +561,41 @@ NS_INLINE CGFloat radiansToDegrees(CGFloat radians) {
   _player.rate = speed;
 }
 
+- (CVPixelBufferRef)pixelBufferFormCIImage:(CIImage *)image {
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+                                    @{}, kCVPixelBufferIOSurfacePropertiesKey,
+                                    @YES, kCVPixelBufferCGImageCompatibilityKey,
+                                    @YES, kCVPixelBufferCGBitmapContextCompatibilityKey, nil];
+    CIContext *mContext = [CIContext contextWithOptions:@{}];
+    CVPixelBufferRef pixelBufferCopy = NULL;
+    CVReturn status = CVPixelBufferCreate(kCFAllocatorDefault,
+                                          image.extent.size.width,
+                                          image.extent.size.height,
+                                          kCVPixelFormatType_32BGRA,
+                                          (__bridge CFDictionaryRef) options,
+                                          &pixelBufferCopy);
+    
+    if (status == kCVReturnSuccess) {
+        CIRenderDestination *destination = [[CIRenderDestination alloc] initWithPixelBuffer:pixelBufferCopy];
+        [mContext startTaskToRender:image toDestination:destination error:nil];
+    }
+    return pixelBufferCopy;
+}
+
 - (CVPixelBufferRef)copyPixelBuffer {
   CVPixelBufferRef buffer = NULL;
   CMTime outputItemTime = [_videoOutput itemTimeForHostTime:CACurrentMediaTime()];
   if ([_videoOutput hasNewPixelBufferForItemTime:outputItemTime]) {
     buffer = [_videoOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
+    CFTypeRef colorPrimaries = CVBufferCopyAttachment(buffer, kCVImageBufferTransferFunctionKey, NULL);
+    if (colorPrimaries && CFEqual(colorPrimaries, kCVImageBufferTransferFunction_ITU_R_2100_HLG)) {
+      if (@available(iOS 14.1, *)) {
+        CIImage *image = [CIImage imageWithCVPixelBuffer:buffer options:@{kCIImageToneMapHDRtoSDR : @(YES)}];
+        CVPixelBufferRef newP = [self pixelBufferFormCIImage:image];
+        CVPixelBufferRelease(buffer);
+        buffer = newP;
+      }
+    }
   } else {
     // If the current time isn't available yet, use the time that was checked when informing the
     // engine that a frame was available (if any).
